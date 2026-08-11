@@ -430,6 +430,7 @@
         p         60 IN A 95.217.192.59
         c         60 IN A 95.217.192.59
         paste     60 IN A 95.217.192.59
+        social    60 IN A 95.217.192.59
       '';
       nets.internet.ip6.prefix = "2a01:4f9:4a:4f1a::2/64";
     };
@@ -486,7 +487,6 @@
       extraZones."krebsco.de" = ''
         cache     60 IN A 95.216.1.150
         prism     60 IN A 95.216.1.150
-        social    60 IN A 95.216.1.150
       '';
       extraZones."lassul.us" = ''
         $TTL 3600
