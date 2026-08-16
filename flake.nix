@@ -1,5 +1,8 @@
 {
   inputs = {
+    # the kartei submodule holds the host registry; without this it is missing
+    # from the flake source tree
+    self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-writers.url = "git+https://cgit.krebsco.de/nix-writers";
     nix-writers.inputs.nixpkgs.follows = "nixpkgs";
@@ -12,8 +15,16 @@
   description = "stockholm";
 
   outputs = { self, nixpkgs, nix-writers, buildbot-nix, ... }: {
-    nixosConfigurations = nixpkgs.lib.mapAttrs (machineName: _: nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
+    nixosConfigurations = let
+      inherit (nixpkgs) lib;
+      # everything not listed here is x86_64-linux
+      hostSystems = { onebutton = "armv6l-linux"; };
+      # test-* are CI eval stubs, not deployable hosts
+      hostNames = lib.filter (n: !lib.hasPrefix "test-" n)
+        (lib.attrNames (lib.filterAttrs (_: t: t == "directory")
+          (builtins.readDir ./krebs/1systems)));
+    in lib.genAttrs hostNames (machineName: nixpkgs.lib.nixosSystem {
+      system = hostSystems.${machineName} or "x86_64-linux";
       specialArgs.stockholm = self;
       specialArgs.nix-writers = nix-writers;
       specialArgs.buildbot-nix = buildbot-nix;
@@ -23,7 +34,7 @@
           krebs.secret.directory = "/var/src/secrets";
         }
       ];
-    }) (builtins.readDir ./krebs/1systems);
+    });
 
     nixosModules =
     let
