@@ -36,6 +36,29 @@
       ];
     });
 
+    # Secrets live in pass, not in the flake, so nixos-rebuild cannot ship
+    # them. This copies them to the target's /var/src/secrets via krops.
+    # usage: nix run .#populate-secrets -- <host> [target]
+    # The krops source bakes in $HOME, so it has to be built at run time.
+    apps = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] (system: {
+      populate-secrets = {
+        type = "app";
+        program = "${nixpkgs.legacyPackages.${system}.writeShellApplication {
+          name = "populate-secrets";
+          text = ''
+            host=''${1:?usage: populate-secrets <host> [target]}
+            target=''${2:-$host}
+            exec "$(nix-build --no-out-link \
+                -I nixpkgs=${nixpkgs} \
+                --argstr name "$host" \
+                --argstr target "$target" \
+                -A populate-secrets \
+                ${self}/krebs/krops.nix)"
+          '';
+        }}/bin/populate-secrets";
+      };
+    });
+
     nixosModules =
     let
       inherit (nixpkgs) lib;
